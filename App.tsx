@@ -1,24 +1,41 @@
 import React, { useState } from 'react';
 import { 
-  Send, 
   Sparkles, 
+  Send, 
   Facebook, 
   Instagram, 
   Linkedin, 
   Cpu, 
   Search, 
   Lightbulb,
-  Wand2
+  Wand2,
+  RefreshCw // Nouvel icône pour régénérer
 } from 'lucide-react';
 import { Tone, PostState, GeneratedContent } from './types';
 import { generatePostContent, generateImage } from './services/geminiService';
 import PostCard from './components/PostCard';
 import ImagePreview from './components/ImagePreview';
 
+// Petits modificateurs pour forcer une variation d'image
+const IMAGE_VARIATIONS = [
+  "cinematic lighting, different angle",
+  "minimalist style, soft colors",
+  "vibrant colors, high contrast",
+  "close-up shot, detailed texture",
+  "wide angle, atmospheric perspective"
+];
+
 const App: React.FC = () => {
+  // Mise à jour du State avec les plateformes
   const [state, setState] = useState<PostState>({
     topic: '',
     tone: Tone.PROFESSIONAL,
+    // Par défaut, on active tout. L'utilisateur peut décocher.
+    platforms: {
+      linkedin: true,
+      facebook: true,
+      instagram: true
+    },
     content: null,
     imageUrl: null,
     isGeneratingText: false,
@@ -30,6 +47,12 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!state.topic.trim()) return;
 
+    // Vérification qu'au moins une plateforme est choisie
+    if (!state.platforms.linkedin && !state.platforms.facebook && !state.platforms.instagram) {
+      setState(prev => ({ ...prev, error: "Veuillez sélectionner au moins un réseau social." }));
+      return;
+    }
+
     setState(prev => ({ 
       ...prev, 
       isGeneratingText: true, 
@@ -40,8 +63,9 @@ const App: React.FC = () => {
     }));
 
     try {
-      // Step 1: Generate Text
-      const content = await generatePostContent(state.topic, state.tone);
+      // Step 1: Generate Text (On passe les plateformes au service)
+      // Note: Assure-toi d'avoir mis à jour generatePostContent dans le service pour accepter ce 3eme argument !
+      const content = await generatePostContent(state.topic, state.tone, state.platforms);
       
       setState(prev => ({ 
         ...prev, 
@@ -65,9 +89,36 @@ const App: React.FC = () => {
       console.error(error);
       setState(prev => ({ 
         ...prev, 
-        error: "Une erreur est survenue lors de la génération. Veuillez vérifier votre clé API ou réessayer.",
+        error: "Une erreur est survenue. Vérifiez votre clé API ou réessayez.",
         isGeneratingText: false,
         isGeneratingImage: false
+      }));
+    }
+  };
+
+  // Nouvelle fonction pour régénérer uniquement l'image
+  const handleRegenerateImage = async () => {
+    if (!state.content?.imagePrompt) return;
+
+    setState(prev => ({ ...prev, isGeneratingImage: true, error: null }));
+
+    try {
+      // Astuce : On prend le prompt original et on ajoute un "sel" aléatoire pour varier
+      const randomVariation = IMAGE_VARIATIONS[Math.floor(Math.random() * IMAGE_VARIATIONS.length)];
+      const variatedPrompt = `${state.content.imagePrompt}, ${randomVariation}`;
+      
+      const newImageUrl = await generateImage(variatedPrompt);
+      
+      setState(prev => ({ 
+        ...prev, 
+        imageUrl: newImageUrl, 
+        isGeneratingImage: false 
+      }));
+    } catch (error) {
+      setState(prev => ({ 
+        ...prev, 
+        isGeneratingImage: false, 
+        error: "Impossible de régénérer l'image." 
       }));
     }
   };
@@ -77,12 +128,18 @@ const App: React.FC = () => {
     "Astuces SEO pour 2025",
     "Ma routine de développeur",
     "L'impact de l'IA sur le code",
-    "Comment optimiser ses images web",
-    "Le futur du CSS avec Tailwind",
-    "3 extensions Chrome pour SEO",
-    "Gérer le syndrome de l'imposteur",
-    "Mon setup télétravail idéal"
+    "Gérer le syndrome de l'imposteur"
   ];
+
+  const handlePlatformChange = (platform: keyof typeof state.platforms) => {
+    setState(prev => ({
+      ...prev,
+      platforms: {
+        ...prev.platforms,
+        [platform]: !prev.platforms[platform]
+      }
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 pb-12">
@@ -96,25 +153,17 @@ const App: React.FC = () => {
           <div className="flex gap-4 text-sm font-medium text-gray-500">
              <span className="flex items-center gap-1"><Cpu size={14}/> Tech</span>
              <span className="flex items-center gap-1"><Search size={14}/> SEO</span>
-             <span className="flex items-center gap-1"><Lightbulb size={14}/> Visibilité</span>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Intro Section */}
-        <div className="mb-8 text-center max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">Votre Agent Social Media Personnel</h2>
-          <p className="text-gray-500">
-            Automatisez la création de vos posts.
-            Obtenez 2 variantes pour Facebook, Instagram et LinkedIn (Format Classique & Carrousel) en un clic.
-          </p>
-        </div>
-
+        
         {/* Input Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-10 max-w-3xl mx-auto">
           <form onSubmit={handleGenerate} className="space-y-6">
             
+            {/* Topic Input */}
             <div>
               <label htmlFor="topic" className="block text-sm font-semibold text-gray-700 mb-2">
                 Sujet du post
@@ -126,32 +175,49 @@ const App: React.FC = () => {
                   value={state.topic}
                   onChange={(e) => setState(prev => ({ ...prev, topic: e.target.value }))}
                   placeholder="Ex: Les avantages du Server-Side Rendering..."
-                  className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                  className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                 />
                 <button 
                   type="button" 
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600"
-                  title="Suggérer un sujet"
                   onClick={() => setState(prev => ({ ...prev, topic: suggestionChips[Math.floor(Math.random() * suggestionChips.length)] }))}
                 >
                   <Wand2 size={18} />
                 </button>
               </div>
-              
-              <div className="flex flex-wrap gap-2 mt-3">
-                {suggestionChips.map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setState(prev => ({ ...prev, topic: chip }))}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors"
-                  >
-                    {chip}
-                  </button>
-                ))}
+            </div>
+
+            {/* Platform Selection - NOUVEAU */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Réseaux cibles</label>
+              <div className="flex flex-wrap gap-6">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${state.platforms.linkedin ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white'}`}>
+                    {state.platforms.linkedin && <span className="text-white text-xs">✓</span>}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={state.platforms.linkedin} onChange={() => handlePlatformChange('linkedin')} />
+                  <span className="text-gray-600 group-hover:text-indigo-600 flex items-center gap-1"><Linkedin size={16}/> LinkedIn</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${state.platforms.facebook ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white'}`}>
+                    {state.platforms.facebook && <span className="text-white text-xs">✓</span>}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={state.platforms.facebook} onChange={() => handlePlatformChange('facebook')} />
+                  <span className="text-gray-600 group-hover:text-indigo-600 flex items-center gap-1"><Facebook size={16}/> Facebook</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${state.platforms.instagram ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white'}`}>
+                    {state.platforms.instagram && <span className="text-white text-xs">✓</span>}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={state.platforms.instagram} onChange={() => handlePlatformChange('instagram')} />
+                  <span className="text-gray-600 group-hover:text-indigo-600 flex items-center gap-1"><Instagram size={16}/> Instagram</span>
+                </label>
               </div>
             </div>
 
+            {/* Tone & Submit */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Ton</label>
@@ -180,7 +246,7 @@ const App: React.FC = () => {
                     ) : (
                       <>
                         <Send size={18} />
-                        Générer les Posts
+                        Générer
                       </>
                     )}
                   </button>
@@ -198,18 +264,31 @@ const App: React.FC = () => {
         {/* Results Section */}
         {(state.content || state.isGeneratingText) && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            
             {/* Visual Column */}
             <div className="lg:col-span-1 order-2 lg:order-1">
-               <ImagePreview 
-                  imageUrl={state.imageUrl} 
-                  isLoading={state.isGeneratingImage} 
-                  prompt={state.content?.imagePrompt}
-               />
+               <div className="sticky top-24">
+                 <ImagePreview 
+                    imageUrl={state.imageUrl} 
+                    isLoading={state.isGeneratingImage} 
+                    prompt={state.content?.imagePrompt}
+                 />
+                 {/* Bouton Régénérer Image - NOUVEAU */}
+                 {state.imageUrl && !state.isGeneratingImage && (
+                   <button 
+                     onClick={handleRegenerateImage}
+                     className="w-full mt-3 py-2 px-4 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                   >
+                     <RefreshCw size={16} />
+                     Régénérer une variante
+                   </button>
+                 )}
+               </div>
             </div>
 
-            {/* Content Columns */}
+            {/* Content Columns - Affichage conditionnel selon les plateformes choisies */}
             <div className="lg:col-span-2 order-1 lg:order-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {state.content?.linkedin && (
+              {state.platforms.linkedin && state.content?.linkedin && (
                 <PostCard
                   platform="LinkedIn"
                   icon={<Linkedin size={20} />}
@@ -218,7 +297,7 @@ const App: React.FC = () => {
                   labels={["Classique", "Carrousel"]}
                 />
               )}
-              {state.content?.facebook && (
+              {state.platforms.facebook && state.content?.facebook && (
                 <PostCard
                   platform="Facebook"
                   icon={<Facebook size={20} />}
@@ -227,7 +306,7 @@ const App: React.FC = () => {
                   labels={["Engageant", "Informatif"]}
                 />
               )}
-              {state.content?.instagram && (
+              {state.platforms.instagram && state.content?.instagram && (
                 <div className="md:col-span-2">
                   <PostCard
                     platform="Instagram"
