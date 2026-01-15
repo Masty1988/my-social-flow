@@ -1,15 +1,18 @@
-import { GoogleGenAI, SchemaType } from "@google/genai"; // Vérifie tes imports selon ta version SDK
+import { GoogleGenAI, Type } from "@google/genai";
 import { GeneratedContent, Tone } from "../types";
 
-// Types pour tes plateformes (à mettre dans types.ts idéalement, mais ok ici pour la démo)
+// Types pour tes plateformes
 interface PlatformSelection {
   linkedin: boolean;
   facebook: boolean;
   instagram: boolean;
 }
 
-const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || process.env.API_KEY; 
-// Note: en Vite/React on utilise souvent import.meta.env
+const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+
+if (!apiKey) {
+  console.error("VITE_GOOGLE_API_KEY non définie dans .env.local");
+}
 
 const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
@@ -68,34 +71,30 @@ export const generatePostContent = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Modèle stable et rapide
+      model: "gemini-2.0-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
-            // On rend les champs optionnels ("nullable" n'est pas toujours géré pareil, 
-            // mais si Gemini ne remplit pas, on aura null ou undefined)
-            facebook: { 
-              type: SchemaType.ARRAY, 
-              items: { type: SchemaType.STRING },
-              description: "Variantes Facebook (si demandé)" 
+            facebook: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Variantes Facebook (si demandé)"
             },
-            instagram: { 
-              type: SchemaType.ARRAY, 
-              items: { type: SchemaType.STRING },
-              description: "Variantes Instagram (si demandé)" 
+            instagram: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Variantes Instagram (si demandé)"
             },
-            linkedin: { 
-              type: SchemaType.ARRAY, 
-              items: { type: SchemaType.STRING },
-              description: "Variantes LinkedIn (si demandé)" 
+            linkedin: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Variantes LinkedIn (si demandé)"
             },
-            imagePrompt: { type: SchemaType.STRING, description: "Prompt image" },
+            imagePrompt: { type: Type.STRING, description: "Prompt image" },
           },
-          // On ne met rien en "required" strict pour éviter les erreurs si une plateforme est sautée,
-          // sauf imagePrompt qu'on veut toujours.
           required: ["imagePrompt"],
         },
       },
