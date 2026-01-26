@@ -1,128 +1,124 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GeneratedContent, Tone } from "../types";
 
-// Types pour tes plateformes
-interface PlatformSelection {
-  linkedin: boolean;
-  facebook: boolean;
-  instagram: boolean;
-}
-
-const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+const apiKey = process.env.API_KEY;
 
 if (!apiKey) {
-  console.error("VITE_GOOGLE_API_KEY non définie dans .env.local");
+  console.error("API_KEY is missing from environment variables");
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+const ai = new GoogleGenAI({ apiKey: apiKey || 'DUMMY_KEY_FOR_BUILD' });
 
 export const generatePostContent = async (
   topic: string,
-  tone: Tone,
-  platforms: PlatformSelection
+  tone: Tone
 ): Promise<GeneratedContent> => {
   
-  // 1. Construction dynamique des instructions
-  let platformInstructions = "";
-  
-  if (platforms.facebook) {
-    platformInstructions += `
-    FACEBOOK :
-    - Option 1 : Post engageant (Question ouverte pour lancer un débat tech).
-    - Option 2 : "Le saviez-vous ?" (Info technique surprenante).
-    `;
-  }
-  
-  if (platforms.instagram) {
-    platformInstructions += `
-    INSTAGRAM :
-    - Option 1 : Visuel & Punchy (Emojis, listes à puces, hashtag tech).
-    - Option 2 : Behind the scenes (Vie de dev/entrepreneur).
-    `;
-  }
-  
-  if (platforms.linkedin) {
-    platformInstructions += `
-    LINKEDIN :
-    - Option 1 : Expertise (Analyse pro, point de vue tranché sur le sujet).
-    - Option 2 : Carrousel (Texte découpé en 3-5 slides logiques).
-    `;
-  }
-
   const prompt = `
-    Rôle : Tu es un stratège Social Media Tech et un Copywriter d'élite.
-    Sujet : "${topic}"
-    Ton : "${tone}"
+    Tu es un expert en gestion de réseaux sociaux pour la tech.
+    Sujet: "${topic}".
+    Ton: "${tone}".
     
-    Tâche : Génère des posts UNIQUEMENT pour les plateformes suivantes selon les règles ci-dessous.
-    Ne génère RIEN pour les plateformes non demandées.
+    Génère 2 variantes de posts pour CHAQUE plateforme (Facebook, Instagram, LinkedIn) et une description visuelle pour une image.
     
-    Règles de rédaction :
-    - Orthographe : Zéro faute.
-    - Style : Direct, sans jargon inutile, motivant.
-    - Format : Aère le texte.
+    Règles pour les variantes :
     
-    ${platformInstructions}
+    1. FACEBOOK :
+       - Option 1 : Post engageant qui pose une question à la communauté.
+       - Option 2 : Post informatif court type "Le saviez-vous ?".
     
-    IMAGE PROMPT :
-    Description en anglais pour une IA générative (Midjourney/DALL-E style). 
-    Doit être moderne, tech, cinématique ou minimaliste. Pas de texte dans l'image.
+    2. INSTAGRAM :
+       - Option 1 : Post court et punchy avec beaucoup d'emojis.
+       - Option 2 : Post type "Storytelling" (partage d'expérience).
+    
+    3. LINKEDIN :
+       - Option 1 : Post "Thought Leadership" classique (Opinion/Expertise).
+       - Option 2 : Structure pour un CARROUSEL (Slide 1, Slide 2, Slide 3...).
+    
+    Général :
+    - Ajoute des hashtags pertinents à la fin.
+    - Image Prompt : Description en anglais pour un générateur d'image IA, style moderne, tech, minimaliste.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            facebook: {
-              type: Type.ARRAY,
+            facebook: { 
+              type: Type.ARRAY, 
               items: { type: Type.STRING },
-              description: "Variantes Facebook (si demandé)"
+              description: "2 variantes pour Facebook" 
             },
-            instagram: {
-              type: Type.ARRAY,
+            instagram: { 
+              type: Type.ARRAY, 
               items: { type: Type.STRING },
-              description: "Variantes Instagram (si demandé)"
+              description: "2 variantes pour Instagram" 
             },
-            linkedin: {
-              type: Type.ARRAY,
+            linkedin: { 
+              type: Type.ARRAY, 
               items: { type: Type.STRING },
-              description: "Variantes LinkedIn (si demandé)"
+              description: "2 variantes pour LinkedIn (Classique + Carrousel)" 
             },
-            imagePrompt: { type: Type.STRING, description: "Prompt image" },
+            imagePrompt: { type: Type.STRING, description: "Prompt pour générer l'image" },
           },
-          required: ["imagePrompt"],
+          required: ["facebook", "instagram", "linkedin", "imagePrompt"],
         },
       },
     });
 
-    const text = response.text(); // Note: .text() est souvent une méthode sur les dernières versions SDK
-    if (!text) throw new Error("No response from Gemini");
+    const text = response.text;
+    if (!text) throw new Error("No text response from Gemini");
 
     return JSON.parse(text) as GeneratedContent;
-
   } catch (error) {
-    console.error("Error generating content:", error);
+    console.error("Error generating text:", error);
     throw error;
   }
 };
 
 export const generateImage = async (prompt: string): Promise<string> => {
-  // ... (Ta fonction image existante reste inchangée)
-  // Juste pour rappel, assure-toi d'utiliser un modèle qui supporte l'image generation
-  // "gemini-1.5-flash" ne génère pas d'images directement (il fait du texte).
-  // Pour l'image, tu dois utiliser soit une API tierce (OpenAI/DallE), 
-  // soit le modèle imagen-3 si tu y as accès via Vertex AI, 
-  // soit garder ton code actuel si tu as accès à une beta privée Gemini qui fait de l'image.
-  
-  // SI tu n'as pas accès à la génération d'image native Gemini :
-  // Je te conseille de retourner une image placeholder pour l'instant
-  // return `https://placehold.co/600x600?text=${encodeURIComponent(prompt.slice(0,20))}`;
-  
-  // Sinon garde ton code actuel s'il marche !
-  return "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80"; // Placeholder temporaire pour test
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1",
+        },
+      },
+    });
+
+    let imageUrl = '';
+    
+    if (response.candidates && response.candidates[0].content.parts) {
+       for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const base64EncodeString = part.inlineData.data;
+          imageUrl = `data:image/png;base64,${base64EncodeString}`;
+          break; // Found the image
+        }
+      }
+    }
+
+    if (!imageUrl) {
+      throw new Error("No image generated.");
+    }
+
+    return imageUrl;
+
+  } catch (error) {
+    console.error("Error generating image:", error);
+    throw error;
+  }
 };
