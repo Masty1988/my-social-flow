@@ -14,7 +14,8 @@ import {
   UserButton,
   useUser,
 } from '@clerk/clerk-react';
-import { Sparkles, LogIn, Fingerprint, Mail } from 'lucide-react';
+import { Fingerprint, Mail } from 'lucide-react';
+import Logo from './Logo';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -29,9 +30,9 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
           <div className="max-w-md w-full">
             {/* Logo */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 text-indigo-600 mb-4">
-                <Sparkles size={40} />
-                <h1 className="text-3xl font-bold tracking-tight">SocialFlow AI</h1>
+              <div className="inline-flex items-center gap-3 mb-4">
+                <Logo size={48} />
+                <h1 className="text-3xl font-bold tracking-tight text-blue-600">Social AI</h1>
               </div>
               <p className="text-gray-500">
                 Votre Agent Social Media Personnel
