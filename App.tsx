@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  Send, 
-  Sparkles, 
-  Facebook, 
-  Instagram, 
-  Linkedin, 
-  Cpu, 
-  Search, 
+import { useAuth } from '@clerk/clerk-react';
+import {
+  Send,
+  Sparkles,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Cpu,
+  Search,
   Lightbulb,
   Wand2
 } from 'lucide-react';
-import { Tone, PostState, GeneratedContent } from './types';
-import { generatePostContent, generateImage } from './services/geminiService';
+import { Tone, PostState } from './types';
+import { generatePostContent, generateImage } from './services/apiService';
 import PostCard from './components/PostCard';
 import ImagePreview from './components/ImagePreview';
+import { UserMenu } from './components/AuthWrapper';
 
 const App: React.FC = () => {
+  // Hook Clerk pour l'authentification
+  const { getToken } = useAuth();
+
   const [state, setState] = useState<PostState>({
     topic: '',
     tone: Tone.PROFESSIONAL,
@@ -30,32 +35,32 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!state.topic.trim()) return;
 
-    setState(prev => ({ 
-      ...prev, 
-      isGeneratingText: true, 
-      isGeneratingImage: true, 
-      content: null, 
-      imageUrl: null, 
-      error: null 
+    setState(prev => ({
+      ...prev,
+      isGeneratingText: true,
+      isGeneratingImage: true,
+      content: null,
+      imageUrl: null,
+      error: null
     }));
 
     try {
-      // Step 1: Generate Text
-      const content = await generatePostContent(state.topic, state.tone);
-      
-      setState(prev => ({ 
-        ...prev, 
+      // Step 1: Generate Text (via API sécurisée)
+      const content = await generatePostContent(state.topic, state.tone, getToken);
+
+      setState(prev => ({
+        ...prev,
         content: content,
-        isGeneratingText: false 
+        isGeneratingText: false
       }));
 
-      // Step 2: Generate Image
+      // Step 2: Generate Image (via API sécurisée)
       if (content.imagePrompt) {
-        const imageUrl = await generateImage(content.imagePrompt);
-        setState(prev => ({ 
-          ...prev, 
-          imageUrl, 
-          isGeneratingImage: false 
+        const imageUrl = await generateImage(content.imagePrompt, getToken);
+        setState(prev => ({
+          ...prev,
+          imageUrl,
+          isGeneratingImage: false
         }));
       } else {
         setState(prev => ({ ...prev, isGeneratingImage: false }));
@@ -63,9 +68,10 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error(error);
-      setState(prev => ({ 
-        ...prev, 
-        error: "Une erreur est survenue lors de la génération. Veuillez vérifier votre clé API ou réessayer.",
+      const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
+      setState(prev => ({
+        ...prev,
+        error: errorMessage,
         isGeneratingText: false,
         isGeneratingImage: false
       }));
@@ -93,10 +99,13 @@ const App: React.FC = () => {
             <Sparkles size={24} />
             <h1 className="text-xl font-bold tracking-tight">SocialFlow AI</h1>
           </div>
-          <div className="flex gap-4 text-sm font-medium text-gray-500">
-             <span className="flex items-center gap-1"><Cpu size={14}/> Tech</span>
-             <span className="flex items-center gap-1"><Search size={14}/> SEO</span>
-             <span className="flex items-center gap-1"><Lightbulb size={14}/> Visibilité</span>
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex gap-4 text-sm font-medium text-gray-500">
+              <span className="flex items-center gap-1"><Cpu size={14}/> Tech</span>
+              <span className="flex items-center gap-1"><Search size={14}/> SEO</span>
+              <span className="flex items-center gap-1"><Lightbulb size={14}/> Visibilité</span>
+            </div>
+            <UserMenu />
           </div>
         </div>
       </header>

@@ -1,52 +1,108 @@
-# Configuration de l'API Gemini pour SocialFlow AI
+# Configuration de SocialFlow AI
 
-## Informations du projet Google Cloud
+## Architecture de sécurité
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENT (React)                          │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐ │
+│  │ ClerkProvider│───▶│  AuthWrapper │───▶│       App.tsx       │ │
+│  │  (Auth)     │    │ (Gate)      │    │ (Interface)         │ │
+│  └─────────────┘    └─────────────┘    └─────────────────────┘ │
+│                              │                                  │
+│                              ▼                                  │
+│                     ┌─────────────┐                            │
+│                     │ apiService  │ ◀── Envoie JWT Token       │
+│                     └─────────────┘                            │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     VERCEL EDGE (Middleware)                    │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ middleware.ts                                            │   │
+│  │ - Intercepte /api/*                                      │   │
+│  │ - Vérifie le JWT Clerk                                   │   │
+│  │ - 401 si non authentifié                                 │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ ✅ Authentifié
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  VERCEL SERVERLESS FUNCTIONS                    │
+│  ┌──────────────────────┐    ┌──────────────────────┐          │
+│  │ /api/generate-content │    │ /api/generate-image  │          │
+│  │ (Appelle Gemini)      │    │ (Appelle Gemini)     │          │
+│  └──────────────────────┘    └──────────────────────┘          │
+│                              │                                  │
+│                              ▼                                  │
+│                     ┌─────────────┐                            │
+│                     │ GOOGLE_API_KEY │ ◀── Jamais exposée       │
+│                     │ (Côté serveur) │    côté client          │
+│                     └─────────────┘                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 1. Configuration Clerk (Authentification)
+
+### Créer un compte Clerk
+
+1. Rendez-vous sur [clerk.com](https://clerk.com)
+2. Créez un compte et un nouveau projet
+3. Dans **Configure > Email, Phone, Username**, activez:
+   - Email address
+   - **Passkeys** (pour FaceID/TouchID)
+
+### Récupérer les clés
+
+Dans le dashboard Clerk > **API Keys**:
+- `VITE_CLERK_PUBLISHABLE_KEY` (pk_test_xxx ou pk_live_xxx)
+- `CLERK_SECRET_KEY` (sk_test_xxx ou sk_live_xxx)
+
+## 2. Configuration Google Cloud (Gemini API)
+
+### Informations du projet
 
 - **Project ID**: `gen-lang-client-0280468357`
 - **Credits disponibles**: 255€
 
-## Etapes pour générer la clé API
+### Créer une clé API
 
-### 1. Accéder à Google Cloud Console
+1. [Google Cloud Console](https://console.cloud.google.com/)
+2. **APIs & Services** > **Credentials** > **+ CREATE CREDENTIALS** > **API Key**
+3. Copiez la clé générée
 
-Rendez-vous sur [Google Cloud Console](https://console.cloud.google.com/)
+### Activer la Generative Language API
 
-### 2. Créer une clé API
-
-1. Dans le menu de navigation, allez dans **APIs & Services** > **Credentials**
-2. Cliquez sur **+ CREATE CREDENTIALS** en haut de la page
-3. Sélectionnez **API Key**
-4. Une nouvelle clé API sera générée automatiquement
-5. **Copiez cette clé** (vous pouvez la renommer pour mieux l'identifier)
-
-### 3. Activer la Generative Language API
-
-1. Dans le menu de navigation, allez dans **APIs & Services** > **Library**
+1. **APIs & Services** > **Library**
 2. Recherchez **"Generative Language API"**
-3. Cliquez sur le résultat et appuyez sur **ENABLE**
+3. Cliquez sur **ENABLE**
 
-### 4. Configurer la clé dans le projet
+## 3. Variables d'environnement
 
-#### En local
-
-Ouvrez le fichier `.env.local` à la racine du projet et remplacez le placeholder :
+### En local (.env.local)
 
 ```env
-VITE_GOOGLE_API_KEY=votre_clé_api_ici
+# Clerk (Authentification)
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
+
+# Google Gemini (côté serveur uniquement sur Vercel)
+GOOGLE_API_KEY=AIzaXXXXXXXXXXXXXXX
 ```
 
-#### Sur Vercel
+### Sur Vercel
 
-1. Allez dans les **Settings** de votre projet Vercel
-2. Naviguez vers **Environment Variables**
-3. Ajoutez la variable :
-   - **Name**: `VITE_GOOGLE_API_KEY`
-   - **Value**: votre clé API
-   - **Environment**: Production, Preview, Development
+Dans **Settings** > **Environment Variables**, ajoutez:
 
-## Test de l'API
+| Variable | Value | Environments |
+|----------|-------|--------------|
+| `VITE_CLERK_PUBLISHABLE_KEY` | pk_test_xxx | All |
+| `CLERK_SECRET_KEY` | sk_test_xxx | All |
+| `GOOGLE_API_KEY` | AIzaXXX | All |
 
-Lancez l'application en local pour tester :
+**Important**: `GOOGLE_API_KEY` n'a PAS le préfixe `VITE_` car elle ne doit JAMAIS être exposée côté client.
+
+## 4. Test en local
 
 ```bash
 npm install
@@ -55,28 +111,46 @@ npm run dev
 
 L'application sera disponible sur http://localhost:3000
 
-## Sécurité
+### Mode développement sans Clerk
 
-- Ne commitez jamais le fichier `.env.local` (il est dans `.gitignore`)
-- Restreignez votre clé API dans la console Google Cloud si nécessaire (par domaine ou IP)
-- Surveillez votre utilisation dans la console pour éviter les surprises
+Si `VITE_CLERK_PUBLISHABLE_KEY` n'est pas définie, l'app fonctionne sans authentification (utile pour tester l'UI).
+
+## 5. Déploiement Vercel
+
+```bash
+vercel --prod
+```
+
+Ou connectez votre repo GitHub pour le déploiement automatique.
 
 ## Modèles Gemini utilisés
 
-- **gemini-3-flash-preview**: Génération de contenu texte (posts réseaux sociaux)
-- **gemini-2.5-flash-image**: Génération d'images
+- **gemini-2.0-flash**: Génération de contenu texte
+- **gemini-2.0-flash-exp-image-generation**: Génération d'images
+
+## Flux d'authentification
+
+1. **Utilisateur non connecté**: Voit la page de connexion (Passkey/Email)
+2. **Connexion via Clerk**: Passkey (FaceID/TouchID) ou Magic Link Email
+3. **Utilisateur connecté**: Accès à l'interface de génération
+4. **Appel API**: Le JWT Clerk est envoyé dans le header `Authorization`
+5. **Middleware**: Vérifie le JWT avant d'exécuter la fonction
+6. **Génération**: Si authentifié, appelle Gemini côté serveur
 
 ## Dépannage
 
-### Erreur "API_KEY is missing"
+### "Missing VITE_CLERK_PUBLISHABLE_KEY"
 
-Vérifiez que :
-1. Le fichier `.env.local` existe à la racine
-2. La variable s'appelle bien `VITE_GOOGLE_API_KEY`
-3. Redémarrez le serveur de développement après modification du `.env.local`
+L'app fonctionne sans auth en mode dev. Pour activer l'auth, ajoutez la clé dans `.env.local`.
 
-### Erreur 403 ou "API not enabled"
+### Erreur 401 Unauthorized
 
-1. Vérifiez que la **Generative Language API** est bien activée
-2. Vérifiez que la clé API appartient au bon projet
-3. Vérifiez les restrictions éventuelles sur la clé API
+1. Vérifiez que vous êtes bien connecté
+2. Vérifiez que `CLERK_SECRET_KEY` est configurée sur Vercel
+3. Vérifiez les logs Vercel pour plus de détails
+
+### Erreur 500 Server Error
+
+1. Vérifiez que `GOOGLE_API_KEY` est configurée sur Vercel
+2. Vérifiez que la Generative Language API est activée
+3. Vérifiez les logs Vercel
