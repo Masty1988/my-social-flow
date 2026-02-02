@@ -10,9 +10,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Vérifier l'authentification via le header Clerk
-  const userId = req.headers['x-clerk-user-id'];
-  if (!userId) {
+  // Vérifier l'authentification via le Bearer token
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized - Please sign in' });
   }
 
