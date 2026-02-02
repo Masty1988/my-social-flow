@@ -16,7 +16,6 @@
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
-    "@clerk/nextjs": "^6.36.10",
     "@types/node": "^22.14.0",
     "@vercel/node": "^5.5.28",
     "@vitejs/plugin-react": "^5.0.0",
