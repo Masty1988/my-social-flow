@@ -18,10 +18,19 @@ export interface GeneratedContent {
   imagePrompt?: string;
 }
 
+export interface ImageAnalysisContent extends GeneratedContent {
+  imageDescription?: string;
+}
+
+export type InputMode = 'text' | 'image';
+
 export interface PostState {
   topic: string;
   tone: Tone;
-  content: GeneratedContent | null;
+  inputMode: InputMode;
+  uploadedImage: string | null;
+  uploadedImageMimeType: string | null;
+  content: GeneratedContent | ImageAnalysisContent | null;
   imageUrl: string | null;
   isGeneratingText: boolean;
   isGeneratingImage: boolean;

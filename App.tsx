@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import {
   Send,
@@ -8,10 +8,14 @@ import {
   Cpu,
   Search,
   Lightbulb,
-  Wand2
+  Wand2,
+  Type,
+  ImageIcon,
+  Upload,
+  X
 } from 'lucide-react';
-import { Tone, PostState } from './types';
-import { generatePostContent, generateImage } from './services/apiService';
+import { Tone, PostState, InputMode } from './types';
+import { generatePostContent, generateImage, analyzeImageContent } from './services/apiService';
 import PostCard from './components/PostCard';
 import ImagePreview from './components/ImagePreview';
 import { UserMenu } from './components/AuthWrapper';
@@ -24,12 +28,53 @@ const App: React.FC = () => {
   const [state, setState] = useState<PostState>({
     topic: '',
     tone: Tone.PROFESSIONAL,
+    inputMode: 'text',
+    uploadedImage: null,
+    uploadedImageMimeType: null,
     content: null,
     imageUrl: null,
     isGeneratingText: false,
     isGeneratingImage: false,
     error: null,
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Gérer l'upload d'image
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setState(prev => ({ ...prev, error: 'Veuillez sélectionner une image valide' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      // Extraire le base64 sans le préfixe data:...
+      const base64 = result.split(',')[1];
+      setState(prev => ({
+        ...prev,
+        uploadedImage: result, // Pour l'affichage (avec préfixe)
+        uploadedImageMimeType: file.type,
+        error: null
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearUploadedImage = () => {
+    setState(prev => ({
+      ...prev,
+      uploadedImage: null,
+      uploadedImageMimeType: null
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
