@@ -4,6 +4,23 @@ import { GoogleGenAI, Type } from "@google/genai";
 // API Key côté serveur uniquement
 const apiKey = process.env.GOOGLE_API_KEY;
 
+// Whitelist des utilisateurs autorisés
+const ALLOWED_USERS = [
+  'user_3989HW7yvgjlQFhnyrc6ioLVNtS'
+];
+
+// Décoder le JWT pour extraire le user ID
+function getUserIdFromToken(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Vérifier la méthode HTTP
   if (req.method !== 'POST') {
@@ -14,6 +31,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized - Please sign in' });
+  }
+
+  // Extraire et vérifier le user ID
+  const token = authHeader.substring(7);
+  const userId = getUserIdFromToken(token);
+
+  if (!userId || !ALLOWED_USERS.includes(userId)) {
+    return res.status(403).json({ error: 'Access denied - You are not authorized to use this service' });
   }
 
   // Vérifier la clé API
@@ -34,6 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     Sujet: "${topic}".
     Ton: "${tone}".
 
+    IMPORTANT: Tu DOIS répondre UNIQUEMENT en FRANÇAIS. Tous les posts doivent être rédigés en français.
+
     Génère 2 variantes de posts pour CHAQUE plateforme (Facebook, Instagram, LinkedIn) et une description visuelle pour une image.
 
     Règles pour les variantes :
@@ -51,6 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
        - Option 2 : Structure pour un CARROUSEL (Slide 1, Slide 2, Slide 3...).
 
     Général :
+    - Tous les textes DOIVENT être en FRANÇAIS.
     - Ajoute des hashtags pertinents à la fin.
     - Image Prompt : Description en anglais pour un générateur d'image IA, style moderne, tech, minimaliste.
   `;
