@@ -78,7 +78,10 @@ const App: React.FC = () => {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!state.topic.trim()) return;
+
+    // Validation selon le mode
+    if (state.inputMode === 'text' && !state.topic.trim()) return;
+    if (state.inputMode === 'image' && !state.uploadedImage) return;
 
     setState(prev => ({
       ...prev,
@@ -90,25 +93,43 @@ const App: React.FC = () => {
     }));
 
     try {
-      // Step 1: Generate Text (via API sécurisée)
-      const content = await generatePostContent(state.topic, state.tone, getToken);
-
-      setState(prev => ({
-        ...prev,
-        content: content,
-        isGeneratingText: false
-      }));
-
-      // Step 2: Generate Image (via API sécurisée)
-      if (content.imagePrompt) {
-        const imageUrl = await generateImage(content.imagePrompt, getToken);
+      if (state.inputMode === 'text') {
+        // Mode texte : génération classique
+        const content = await generatePostContent(state.topic, state.tone, getToken);
         setState(prev => ({
           ...prev,
-          imageUrl,
+          content: content,
+          isGeneratingText: false
+        }));
+
+        if (content.imagePrompt) {
+          const imageUrl = await generateImage(content.imagePrompt, getToken);
+          setState(prev => ({
+            ...prev,
+            imageUrl,
+            isGeneratingImage: false
+          }));
+        } else {
+          setState(prev => ({ ...prev, isGeneratingImage: false }));
+        }
+      } else {
+        // Mode image : analyse avec Gemini Vision
+        const base64 = state.uploadedImage!.split(',')[1];
+        const content = await analyzeImageContent(
+          base64,
+          state.uploadedImageMimeType!,
+          state.tone,
+          getToken
+        );
+
+        setState(prev => ({
+          ...prev,
+          content: content,
+          isGeneratingText: false,
+          // En mode image, on utilise l'image uploadée comme preview
+          imageUrl: state.uploadedImage,
           isGeneratingImage: false
         }));
-      } else {
-        setState(prev => ({ ...prev, isGeneratingImage: false }));
       }
 
     } catch (error) {
@@ -168,43 +189,116 @@ const App: React.FC = () => {
         {/* Input Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-10 max-w-3xl mx-auto">
           <form onSubmit={handleGenerate} className="space-y-6">
-            
-            <div>
-              <label htmlFor="topic" className="block text-sm font-semibold text-gray-700 mb-2">
-                Sujet du post
-              </label>
-              <div className="relative">
-                <input
-                  id="topic"
-                  type="text"
-                  value={state.topic}
-                  onChange={(e) => setState(prev => ({ ...prev, topic: e.target.value }))}
-                  placeholder="Ex: Les avantages du Server-Side Rendering..."
-                  className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
-                />
-                <button 
-                  type="button" 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600"
-                  title="Suggérer un sujet"
-                  onClick={() => setState(prev => ({ ...prev, topic: suggestionChips[Math.floor(Math.random() * suggestionChips.length)] }))}
-                >
-                  <Wand2 size={18} />
-                </button>
-              </div>
-              
-              <div className="flex flex-wrap gap-2 mt-3">
-                {suggestionChips.map(chip => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setState(prev => ({ ...prev, topic: chip }))}
-                    className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
+
+            {/* Mode Toggle */}
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit mx-auto">
+              <button
+                type="button"
+                onClick={() => setState(prev => ({ ...prev, inputMode: 'text' }))}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  state.inputMode === 'text'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Type size={18} />
+                Texte
+              </button>
+              <button
+                type="button"
+                onClick={() => setState(prev => ({ ...prev, inputMode: 'image' }))}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  state.inputMode === 'image'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <ImageIcon size={18} />
+                Image
+              </button>
             </div>
+
+            {/* Mode Texte */}
+            {state.inputMode === 'text' && (
+              <div>
+                <label htmlFor="topic" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Sujet du post
+                </label>
+                <div className="relative">
+                  <input
+                    id="topic"
+                    type="text"
+                    value={state.topic}
+                    onChange={(e) => setState(prev => ({ ...prev, topic: e.target.value }))}
+                    placeholder="Ex: Les avantages du Server-Side Rendering..."
+                    className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600"
+                    title="Suggérer un sujet"
+                    onClick={() => setState(prev => ({ ...prev, topic: suggestionChips[Math.floor(Math.random() * suggestionChips.length)] }))}
+                  >
+                    <Wand2 size={18} />
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {suggestionChips.map(chip => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setState(prev => ({ ...prev, topic: chip }))}
+                      className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mode Image */}
+            {state.inputMode === 'image' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Uploadez une image
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Photo de setup, écran de code, bureau de dev... L'IA analysera l'image pour générer des posts tech.
+                </p>
+
+                {!state.uploadedImage ? (
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-all">
+                    <Upload size={32} className="text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500">Cliquez pour uploader</span>
+                    <span className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP (max 10MB)</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="relative">
+                    <img
+                      src={state.uploadedImage}
+                      alt="Image uploadée"
+                      className="w-full h-48 object-cover rounded-xl border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={clearUploadedImage}
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-full shadow-lg transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
@@ -223,18 +317,22 @@ const App: React.FC = () => {
                <div className="flex items-end">
                  <button
                     type="submit"
-                    disabled={state.isGeneratingText || !state.topic}
+                    disabled={
+                      state.isGeneratingText ||
+                      (state.inputMode === 'text' && !state.topic) ||
+                      (state.inputMode === 'image' && !state.uploadedImage)
+                    }
                     className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
                   >
                     {state.isGeneratingText ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                        Rédaction...
+                        {state.inputMode === 'image' ? 'Analyse...' : 'Rédaction...'}
                       </>
                     ) : (
                       <>
                         <Send size={18} />
-                        Générer les Posts
+                        {state.inputMode === 'image' ? 'Analyser l\'image' : 'Générer les Posts'}
                       </>
                     )}
                   </button>
