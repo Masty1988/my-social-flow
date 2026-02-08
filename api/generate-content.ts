@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Server configuration error - API key missing' });
   }
 
-  const { topic, tone } = req.body;
+  const { topic, tone, userPersona, userAudience, userVoice } = req.body;
 
   if (!topic || !tone) {
     return res.status(400).json({ error: 'Missing required fields: topic and tone' });
@@ -54,33 +54,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const ai = new GoogleGenAI({ apiKey });
 
+  const persona = userPersona || "Entrepreneur tech / développeur indépendant";
+  const audience = userAudience || "Freelances, devs, curieux tech";
+  const voice = userVoice || "Accessible, concret, pas de bullshit corporate";
+
   const prompt = `
-    Tu es un expert en gestion de réseaux sociaux pour la tech.
-    Sujet: "${topic}".
-    Ton: "${tone}".
+Tu es un ghostwriter expert en réseaux sociaux tech.
 
-    IMPORTANT: Tu DOIS répondre UNIQUEMENT en FRANÇAIS. Tous les posts doivent être rédigés en français.
+IMPORTANT: Tu DOIS répondre UNIQUEMENT en FRANÇAIS. Tous les posts doivent être rédigés en français.
 
-    Génère 2 variantes de posts pour CHAQUE plateforme (Facebook, Instagram, LinkedIn) et une description visuelle pour une image.
+=== CONTEXTE UTILISATEUR ===
+Persona : ${persona}
+Audience cible : ${audience}
+Style de voix : ${voice}
 
-    Règles pour les variantes :
+=== SUJET DU POST ===
+Titre/Actu : "${topic}"
+Ton souhaité : "${tone}"
 
-    1. FACEBOOK :
-       - Option 1 : Post engageant qui pose une question à la communauté.
-       - Option 2 : Post informatif court type "Le saviez-vous ?".
+=== TA MISSION ===
+Ne fais PAS un résumé de l'actu.
+Trouve un ANGLE unique :
+- Quel impact concret pour l'audience ?
+- Quelle opinion ou question ça soulève ?
+- Quel lien avec le quotidien des gens ?
 
-    2. INSTAGRAM :
-       - Option 1 : Post court et punchy avec beaucoup d'emojis.
-       - Option 2 : Post type "Storytelling" (partage d'expérience).
+=== RÈGLES PAR PLATEFORME ===
 
-    3. LINKEDIN :
-       - Option 1 : Post "Thought Leadership" classique (Opinion/Expertise).
-       - Option 2 : Structure pour un CARROUSEL (Slide 1, Slide 2, Slide 3...).
+1. FACEBOOK (2 variantes) :
+   - Option 1 "Engageant" : Pose une vraie question qui fait réfléchir
+   - Option 2 "Informatif" : Un fait surprenant + pourquoi ça compte
+   - Max 280 caractères, 2-3 emojis max
 
-    Général :
-    - Tous les textes DOIVENT être en FRANÇAIS.
-    - Ajoute des hashtags pertinents à la fin.
-    - Image Prompt : Description en anglais pour un générateur d'image IA, style moderne, tech, minimaliste.
+2. INSTAGRAM (2 variantes) :
+   - Option 1 "Punchy" : Hook en 1ère ligne, emojis stratégiques, CTA clair
+   - Option 2 "Story" : Mini-récit personnel ou cas concret
+   - Max 200 caractères, hashtags populaires + niche
+
+3. LINKEDIN (2 variantes) :
+   - Option 1 "Opinion" : Prends position, sois clivant si besoin
+   - Option 2 "Carrousel" : 5-6 slides avec titres accrocheurs
+   - Hashtags pertinents uniquement
+
+=== IMAGE ===
+Prompt en anglais pour générateur IA.
+Style : Moderne, minimaliste, flat design, couleurs vives sur fond sombre.
+PAS de texte dans l'image.
   `;
 
   try {
