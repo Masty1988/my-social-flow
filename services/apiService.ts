@@ -35,7 +35,13 @@ export const generatePostContent = async (
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ topic, tone }),
+    body: JSON.stringify({
+      topic,
+      tone,
+      userPersona: localStorage.getItem('userPersona') || '',
+      userAudience: localStorage.getItem('userAudience') || '',
+      userVoice: localStorage.getItem('userVoice') || '',
+    }),
   });
 
   if (!response.ok) {

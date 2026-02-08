@@ -8,7 +8,8 @@ import {
   Cpu,
   Search,
   Lightbulb,
-  Wand2
+  Wand2,
+  Settings
 } from 'lucide-react';
 import { Tone, PostState } from './types';
 import { generatePostContent, generateImage } from './services/apiService';
@@ -16,10 +17,13 @@ import PostCard from './components/PostCard';
 import ImagePreview from './components/ImagePreview';
 import { UserMenu } from './components/AuthWrapper';
 import Logo from './components/Logo';
+import ProfileSettingsModal from './components/ProfileSettingsModal';
 
 const App: React.FC = () => {
   // Hook Clerk pour l'authentification
   const { getToken } = useAuth();
+
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const [state, setState] = useState<PostState>({
     topic: '',
@@ -98,6 +102,13 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <Logo size={36} />
             <h1 className="text-xl font-bold tracking-tight text-blue-600">Social AI</h1>
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              className="ml-2 text-gray-400 hover:text-indigo-600 transition-colors"
+              title="Mon Profil"
+            >
+              <Settings size={18} />
+            </button>
           </div>
           <div className="flex items-center gap-6">
             <div className="hidden md:flex gap-4 text-sm font-medium text-gray-500">
@@ -251,6 +262,8 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      <ProfileSettingsModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </div>
   );
 };
