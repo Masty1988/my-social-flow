@@ -10,7 +10,7 @@
  * - Seuls les utilisateurs connectés peuvent générer du contenu
  */
 
-import { GeneratedContent, Tone } from "../types";
+import { GeneratedContent, ImageToPostsContent, Tone } from "../types";
 
 /**
  * Génère le contenu des posts pour les réseaux sociaux
@@ -89,4 +89,56 @@ export const generateImage = async (
 
   const data = await response.json();
   return data.imageUrl;
+};
+
+/**
+ * Génère des posts à partir d'une image uploadée
+ * @param imageBase64 - Image encodée en base64
+ * @param mimeType - Type MIME de l'image
+ * @param description - Description optionnelle de l'image
+ * @param platforms - Réseaux sociaux sélectionnés
+ * @param tone - Le ton souhaité
+ * @param getToken - Fonction Clerk pour obtenir le JWT
+ */
+export const generateFromImage = async (
+  imageBase64: string,
+  mimeType: string,
+  description: string,
+  platforms: string[],
+  tone: Tone,
+  getToken: () => Promise<string | null>
+): Promise<ImageToPostsContent> => {
+  const token = await getToken();
+
+  if (!token) {
+    throw new Error("Non authentifié - Veuillez vous connecter");
+  }
+
+  const response = await fetch('/api/generate-from-image', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      imageBase64,
+      mimeType,
+      description,
+      platforms,
+      tone,
+      userPersona: localStorage.getItem('userPersona') || '',
+      userAudience: localStorage.getItem('userAudience') || '',
+      userVoice: localStorage.getItem('userVoice') || '',
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expirée - Veuillez vous reconnecter");
+    }
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la génération depuis l\'image');
+  }
+
+  return response.json();
 };

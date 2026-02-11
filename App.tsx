@@ -9,7 +9,8 @@ import {
   Search,
   Lightbulb,
   Wand2,
-  Settings
+  Settings,
+  Camera
 } from 'lucide-react';
 import { Tone, PostState } from './types';
 import { generatePostContent, generateImage } from './services/apiService';
@@ -18,12 +19,14 @@ import ImagePreview from './components/ImagePreview';
 import { UserMenu } from './components/AuthWrapper';
 import Logo from './components/Logo';
 import ProfileSettingsModal from './components/ProfileSettingsModal';
+import ImageToPostsModal from './components/ImageToPostsModal';
 
 const App: React.FC = () => {
   // Hook Clerk pour l'authentification
   const { getToken } = useAuth();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isImageToPostsOpen, setIsImageToPostsOpen] = useState(false);
 
   const [state, setState] = useState<PostState>({
     topic: '',
@@ -207,6 +210,18 @@ const App: React.FC = () => {
                </div>
             </div>
           </form>
+
+          {/* Bouton Générer depuis image */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setIsImageToPostsOpen(true)}
+              className="w-full border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <Camera size={18} />
+              Générer depuis une image
+            </button>
+          </div>
         </div>
 
         {state.error && (
@@ -264,6 +279,7 @@ const App: React.FC = () => {
       </main>
 
       <ProfileSettingsModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+      <ImageToPostsModal isOpen={isImageToPostsOpen} onClose={() => setIsImageToPostsOpen(false)} />
     </div>
   );
 };

@@ -27,3 +27,21 @@ export interface PostState {
   isGeneratingImage: boolean;
   error: string | null;
 }
+
+export interface ImageToPostsRequest {
+  imageBase64: string;
+  mimeType: string;
+  description: string;
+  platforms: string[];
+  tone: Tone;
+  userPersona: string;
+  userAudience: string;
+  userVoice: string;
+}
+
+export interface ImageToPostsContent {
+  facebook?: string[];
+  instagram?: string[];
+  linkedin?: string[];
+  twitter?: string[];
+}
