@@ -8,7 +8,8 @@ export enum Tone {
   PROFESSIONAL = 'Professionnel',
   CASUAL = 'Décontracté',
   INFORMATIVE = 'Éducatif',
-  HUMOROUS = 'Humoristique'
+  HUMOROUS = 'Humoristique',
+  INSPIRING = 'Inspirant'
 }
 
 export interface GeneratedContent {

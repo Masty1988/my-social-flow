@@ -54,7 +54,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const platformInstructions: Record<string, string> = {
     linkedin: `LINKEDIN (2 variantes) :
    - Option 1 "Opinion" : Prends position sur ce que montre l'image, sois clivant si besoin
-   - Option 2 "Carrousel" : 5-6 slides avec titres accrocheurs basés sur l'image
+   - Option 2 "Carrousel" : Génère un contenu structuré pour un carrousel LinkedIn basé sur l'image avec ce format EXACT :
+     --- Slide 1 : [Titre accrocheur / Hook qui donne envie de swiper]
+     --- Slide 2 : [Premier point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 3 : [Deuxième point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 4 : [Troisième point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 5 : [Quatrième point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 6 : [CTA / Conclusion - Appel à l'action engageant]
+     Chaque slide doit être autonome et compréhensible seule.
    - Hashtags pertinents uniquement`,
     twitter: `TWITTER/X (2 variantes) :
    - Option 1 "Thread" : Tweet d'accroche + 2-3 tweets de développement

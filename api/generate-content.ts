@@ -58,6 +58,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const audience = userAudience || "Freelances, devs, curieux tech";
   const voice = userVoice || "Accessible, concret, pas de bullshit corporate";
 
+  // Mapping ton → style visuel pour le prompt image
+  const toneImageStyles: Record<string, string> = {
+    'Professionnel': 'Clean and polished aesthetic, muted color palette (navy, charcoal, silver, white accents), subtle gradients, geometric shapes, premium corporate feel. Dark or deep-colored background.',
+    'Décontracté': 'Vibrant and energetic colors (electric blue, coral, lime green, yellow), modern trendy aesthetic, playful composition, lifestyle vibes. Colorful gradient or textured background.',
+    'Éducatif': 'Clear and structured visual, infographic-inspired aesthetic, balanced colors (teal, deep blue, warm orange accents), knowledge-sharing vibe. Dark blue or slate background.',
+    'Humoristique': 'Fun and dynamic style, bold saturated colors (hot pink, bright orange, electric purple), playful exaggerated proportions, pop-art inspired energy. Colorful or neon-tinted background.',
+    'Inspirant': 'Cinematic and dramatic lighting, dark mode aesthetic, rich deep tones (midnight blue, deep purple, gold accents), epic atmosphere, motivational energy. Dark moody background with dramatic light rays.',
+  };
+
+  const imageStyle = toneImageStyles[tone] || toneImageStyles['Professionnel'];
+
+  // Contexte utilisateur pour personnaliser le visuel
+  const profileImageContext = (userPersona || userAudience)
+    ? `The visual should feel relevant to someone who is: ${persona}, targeting: ${audience}.`
+    : '';
+
   const prompt = `
 Tu es un ghostwriter expert en réseaux sociaux tech.
 
@@ -93,13 +109,26 @@ Trouve un ANGLE unique :
 
 3. LINKEDIN (2 variantes) :
    - Option 1 "Opinion" : Prends position, sois clivant si besoin
-   - Option 2 "Carrousel" : 5-6 slides avec titres accrocheurs
+   - Option 2 "Carrousel" : Génère un contenu structuré pour un carrousel LinkedIn avec ce format EXACT :
+     --- Slide 1 : [Titre accrocheur / Hook qui donne envie de swiper]
+     --- Slide 2 : [Premier point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 3 : [Deuxième point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 4 : [Troisième point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 5 : [Quatrième point clé - 1 seule idée, phrase courte et impactante]
+     --- Slide 6 : [CTA / Conclusion - Appel à l'action engageant]
+     Chaque slide doit être autonome et compréhensible seule. Le tout doit raconter une histoire cohérente.
    - Hashtags pertinents uniquement
 
 === IMAGE ===
-Prompt en anglais pour générateur IA.
-Style : Moderne, minimaliste, flat design, couleurs vives sur fond sombre.
-PAS de texte dans l'image.
+Génère un prompt EN ANGLAIS pour un générateur d'images IA.
+RÈGLES ABSOLUES pour l'image :
+- JAMAIS de fond blanc uni. JAMAIS. Utilise toujours un fond coloré, un dégradé, ou une ambiance visuelle riche.
+- JAMAIS de texte, lettres, mots ou typographie dans l'image.
+- JAMAIS de clipart, flat design générique ou illustrations basiques.
+- Privilégie des visuels impactants : ambiance cinématique, éclairage travaillé, profondeur, textures.
+- Style visuel adapté au ton : ${imageStyle}
+${profileImageContext}
+- Le prompt doit décrire une scène ou composition visuelle concrète en lien avec le sujet "${topic}".
   `;
 
   try {
