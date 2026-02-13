@@ -53,16 +53,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const platformInstructions: Record<string, string> = {
     linkedin: `LINKEDIN (2 variantes) :
-   - Option 1 "Opinion" : Prends position sur ce que montre l'image, sois clivant si besoin
-   - Option 2 "Carrousel" : Génère un contenu structuré pour un carrousel LinkedIn basé sur l'image avec ce format EXACT :
-     --- Slide 1 : [Titre accrocheur / Hook qui donne envie de swiper]
-     --- Slide 2 : [Premier point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 3 : [Deuxième point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 4 : [Troisième point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 5 : [Quatrième point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 6 : [CTA / Conclusion - Appel à l'action engageant]
-     Chaque slide doit être autonome et compréhensible seule.
-   - Hashtags pertinents uniquement`,
+   - Option 1 "Opinion" : Prends position sur ce que montre l'image, sois clivant si besoin. Post long format LinkedIn classique avec hook, développement argumenté, et conclusion forte. Hashtags pertinents.
+   - Option 2 "Carrousel" : Génère un contenu structuré pour un carrousel LinkedIn basé sur l'image.
+     FORMAT OBLIGATOIRE - chaque slide séparée par "---" :
+     --- Slide 1 : Hook percutant qui crée la curiosité et donne envie de swiper (max 15 mots)
+     --- Slide 2 : Premier point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 3 : Deuxième point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 4 : Troisième point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 5 : Quatrième point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 6 : CTA fort / Conclusion engageante qui pousse à l'action (commentaire, partage, follow)
+     RÈGLES CARROUSEL :
+     - Chaque slide doit être autonome et compréhensible seule
+     - Le tout raconte une histoire cohérente avec une progression logique
+     - Utiliser des chiffres, données concrètes ou exemples quand possible
+     - Ajouter 3-5 hashtags pertinents après la dernière slide`,
     twitter: `TWITTER/X (2 variantes) :
    - Option 1 "Thread" : Tweet d'accroche + 2-3 tweets de développement
    - Option 2 "Viral" : Un seul tweet percutant, max 280 caractères
@@ -162,9 +166,38 @@ ${selectedPlatformRules}
       throw new Error("No text response from Gemini");
     }
 
-    return res.status(200).json(JSON.parse(text));
+    // Parsing robuste de la réponse JSON
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (parseError) {
+      console.error("JSON parse error (image-to-posts) - raw response:", text);
+      const cleaned = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        console.error("JSON parse fallback failed - cleaned response:", cleaned);
+        return res.status(500).json({
+          error: 'La réponse du modèle n\'a pas pu être interprétée. Réessayez.',
+        });
+      }
+    }
+
+    // Validation souple : s'assurer que chaque plateforme est un array
+    const result: Record<string, string[]> = {};
+    for (const platform of platforms) {
+      const key = platform.toLowerCase();
+      result[key] = Array.isArray(parsed[key]) ? parsed[key] : [];
+    }
+
+    return res.status(200).json(result);
   } catch (error) {
-    console.error("Error generating content from image:", error);
-    return res.status(500).json({ error: 'Failed to generate content from image' });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error generating content from image:", errMsg, error);
+    return res.status(500).json({
+      error: errMsg.includes('did not match')
+        ? 'Le modèle a renvoyé une réponse inattendue. Réessayez.'
+        : 'Failed to generate content from image',
+    });
   }
 }

@@ -16,11 +16,11 @@ export const generatePostContent = async (
   
   // Mapping ton → style visuel pour le prompt image
   const toneImageStyles: Record<string, string> = {
-    'Professionnel': 'Clean polished aesthetic, muted colors (navy, charcoal, silver), subtle gradients, dark or deep-colored background.',
-    'Décontracté': 'Vibrant energetic colors, modern trendy aesthetic, colorful gradient or textured background.',
-    'Éducatif': 'Clear structured visual, infographic-inspired, balanced colors (teal, deep blue), dark blue or slate background.',
-    'Humoristique': 'Fun dynamic style, bold saturated colors, pop-art energy, colorful or neon-tinted background.',
-    'Inspirant': 'Cinematic dramatic lighting, dark mode, rich deep tones, epic atmosphere, dark moody background with dramatic light rays.',
+    'Professionnel': 'Refined minimalist aesthetic, elegant and sober. Muted palette (navy, charcoal, slate). Deep dark background. Clean lines, sophisticated lighting.',
+    'Décontracté': 'Modern colorful aesthetic, vibrant palette (electric blue, coral, lime). Bold gradient backgrounds, energetic composition, trendy feel.',
+    'Éducatif': 'Clear structured visual, balanced palette (teal, deep blue, warm orange). Dark blue background with 3D depth elements.',
+    'Humoristique': 'Fun dynamic bold style, highly saturated colors (hot pink, neon green, electric purple). Pop-art energy, neon-tinted background.',
+    'Inspirant': 'Cinematic dark mode, dramatic lighting, rich deep tones (midnight blue, gold accents). Moody background with volumetric light rays, epic atmosphere.',
   };
 
   const imageStyle = toneImageStyles[tone] || toneImageStyles['Professionnel'];
@@ -43,22 +43,23 @@ export const generatePostContent = async (
        - Option 2 : Post type "Storytelling" (partage d'expérience).
 
     3. LINKEDIN :
-       - Option 1 : Post "Thought Leadership" classique (Opinion/Expertise).
-       - Option 2 : Structure pour un CARROUSEL LinkedIn avec ce format :
-         --- Slide 1 : [Hook / Accroche]
-         --- Slide 2 : [Point clé 1]
-         --- Slide 3 : [Point clé 2]
-         --- Slide 4 : [Point clé 3]
-         --- Slide 5 : [Point clé 4]
-         --- Slide 6 : [CTA / Conclusion]
-         Chaque slide = 1 idée, phrase courte et impactante.
+       - Option 1 : Post "Thought Leadership" classique (Opinion/Expertise). Long format avec hook, développement, conclusion forte.
+       - Option 2 : Structure pour un CARROUSEL LinkedIn avec ce format OBLIGATOIRE :
+         --- Slide 1 : Hook percutant qui crée la curiosité (max 15 mots)
+         --- Slide 2 : Premier point clé (max 20 mots)
+         --- Slide 3 : Deuxième point clé (max 20 mots)
+         --- Slide 4 : Troisième point clé (max 20 mots)
+         --- Slide 5 : Quatrième point clé (max 20 mots)
+         --- Slide 6 : CTA fort / Conclusion engageante
+         Chaque slide = 1 idée, autonome et compréhensible seule. Progression logique.
 
     Général :
     - Ajoute des hashtags pertinents à la fin.
-    - Image Prompt : Description EN ANGLAIS pour un générateur d'image IA.
-      JAMAIS de fond blanc. JAMAIS de texte dans l'image. JAMAIS de clipart ou flat design générique.
+    - Image Prompt : Description EN ANGLAIS pour un générateur d'image IA (minimum 3 phrases détaillées).
+      INTERDIT : fond blanc/uni clair, texte/lettres, clipart/flat design, visages réalistes.
+      Commence TOUJOURS par décrire le fond (couleur riche, dégradé, texture).
+      Inclus éclairage, profondeur, textures concrètes (métal, verre, néon, fumée...).
       Style visuel adapté au ton : ${imageStyle}
-      Privilégie des visuels impactants avec profondeur, textures et éclairage travaillé.
   `;
 
   try {
@@ -95,7 +96,21 @@ export const generatePostContent = async (
     const text = response.text;
     if (!text) throw new Error("No text response from Gemini");
 
-    return JSON.parse(text) as GeneratedContent;
+    // Parsing robuste avec fallback
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const cleaned = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+      parsed = JSON.parse(cleaned);
+    }
+
+    return {
+      facebook: Array.isArray(parsed.facebook) ? parsed.facebook : [],
+      instagram: Array.isArray(parsed.instagram) ? parsed.instagram : [],
+      linkedin: Array.isArray(parsed.linkedin) ? parsed.linkedin : [],
+      imagePrompt: typeof parsed.imagePrompt === 'string' ? parsed.imagePrompt : '',
+    } as GeneratedContent;
   } catch (error) {
     console.error("Error generating text:", error);
     throw error;

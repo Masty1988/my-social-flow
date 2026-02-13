@@ -54,11 +54,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const ai = new GoogleGenAI({ apiKey });
 
+  // Renforcer les règles visuelles dans le prompt image
+  const enhancedPrompt = `Generate a high-quality, visually striking image. CRITICAL RULES: absolutely NO white background, NO plain light background, NO text or letters in the image. Always use rich colors, gradients, or textured backgrounds. ${prompt}`;
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash-exp-image-generation',
       contents: {
-        parts: [{ text: prompt }],
+        parts: [{ text: enhancedPrompt }],
       },
       config: {
         responseModalities: ['Text', 'Image'],
@@ -78,12 +81,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!imageUrl) {
+      console.error("No image in response - candidates:", JSON.stringify(response.candidates));
       throw new Error("No image generated");
     }
 
     return res.status(200).json({ imageUrl });
   } catch (error) {
-    console.error("Error generating image:", error);
-    return res.status(500).json({ error: 'Failed to generate image' });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error generating image:", errMsg, error);
+    return res.status(500).json({
+      error: errMsg.includes('did not match')
+        ? 'Le modèle a renvoyé une réponse inattendue pour l\'image. Réessayez.'
+        : 'Failed to generate image',
+    });
   }
 }
