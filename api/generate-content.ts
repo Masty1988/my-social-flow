@@ -60,11 +60,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Mapping ton → style visuel pour le prompt image
   const toneImageStyles: Record<string, string> = {
-    'Professionnel': 'Clean and polished aesthetic, muted color palette (navy, charcoal, silver, white accents), subtle gradients, geometric shapes, premium corporate feel. Dark or deep-colored background.',
-    'Décontracté': 'Vibrant and energetic colors (electric blue, coral, lime green, yellow), modern trendy aesthetic, playful composition, lifestyle vibes. Colorful gradient or textured background.',
-    'Éducatif': 'Clear and structured visual, infographic-inspired aesthetic, balanced colors (teal, deep blue, warm orange accents), knowledge-sharing vibe. Dark blue or slate background.',
-    'Humoristique': 'Fun and dynamic style, bold saturated colors (hot pink, bright orange, electric purple), playful exaggerated proportions, pop-art inspired energy. Colorful or neon-tinted background.',
-    'Inspirant': 'Cinematic and dramatic lighting, dark mode aesthetic, rich deep tones (midnight blue, deep purple, gold accents), epic atmosphere, motivational energy. Dark moody background with dramatic light rays.',
+    'Professionnel': 'Refined minimalist aesthetic, elegant and sober. Muted color palette (navy, charcoal, slate grey, silver). Subtle gradients, geometric precision, premium feel. Deep dark background (charcoal, midnight blue, or dark slate). Clean lines, sophisticated lighting, high-end editorial look. NO bright or saturated colors.',
+    'Décontracté': 'Modern and colorful aesthetic, contemporary design trends. Vibrant palette (electric blue, coral, lime green, warm yellow). Bold gradient backgrounds, textured surfaces, lifestyle photography feel. Energetic composition with depth and movement. Trendy, fresh, approachable visual energy.',
+    'Éducatif': 'Clear and structured visual, knowledge-sharing aesthetic. Balanced palette (teal, deep blue, warm orange accents). Infographic-inspired depth with 3D elements. Dark blue or deep slate background with subtle texture. Layered composition suggesting organization and clarity.',
+    'Humoristique': 'Fun, dynamic, and bold style. Highly saturated colors (hot pink, bright orange, electric purple, neon green). Pop-art inspired energy, playful exaggerated proportions. Neon-tinted or vibrant gradient background. Unexpected visual juxtapositions, cartoon-meets-reality aesthetic. Maximum visual energy and personality.',
+    'Inspirant': 'Cinematic dark mode aesthetic, dramatic and epic. Rich deep tones (midnight blue, deep purple, gold accents, amber highlights). Moody background with dramatic volumetric light rays, lens flares, or god rays. Film-grade lighting, atmospheric depth, bokeh effects. Motivational grandeur, aspirational mood. Think movie poster or album cover quality.',
   };
 
   const imageStyle = toneImageStyles[tone] || toneImageStyles['Professionnel'];
@@ -108,27 +108,39 @@ Trouve un ANGLE unique :
    - Max 200 caractères, hashtags populaires + niche
 
 3. LINKEDIN (2 variantes) :
-   - Option 1 "Opinion" : Prends position, sois clivant si besoin
-   - Option 2 "Carrousel" : Génère un contenu structuré pour un carrousel LinkedIn avec ce format EXACT :
-     --- Slide 1 : [Titre accrocheur / Hook qui donne envie de swiper]
-     --- Slide 2 : [Premier point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 3 : [Deuxième point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 4 : [Troisième point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 5 : [Quatrième point clé - 1 seule idée, phrase courte et impactante]
-     --- Slide 6 : [CTA / Conclusion - Appel à l'action engageant]
-     Chaque slide doit être autonome et compréhensible seule. Le tout doit raconter une histoire cohérente.
-   - Hashtags pertinents uniquement
+   - Option 1 "Opinion" : Prends position, sois clivant si besoin. Post long format LinkedIn classique avec hook en première ligne, développement argumenté, et conclusion forte. Hashtags pertinents.
+   - Option 2 "Carrousel" : Génère un contenu structuré pour un carrousel LinkedIn.
+     FORMAT OBLIGATOIRE - chaque slide séparée par "---" :
+     --- Slide 1 : Hook percutant qui crée la curiosité et donne envie de swiper (max 15 mots)
+     --- Slide 2 : Premier point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 3 : Deuxième point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 4 : Troisième point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 5 : Quatrième point clé - 1 seule idée, phrase courte et impactante (max 20 mots)
+     --- Slide 6 : CTA fort / Conclusion engageante qui pousse à l'action (commentaire, partage, follow)
+     RÈGLES CARROUSEL :
+     - Chaque slide doit être autonome et compréhensible seule
+     - Le tout raconte une histoire cohérente avec une progression logique
+     - Utiliser des chiffres, données concrètes ou exemples quand possible
+     - Ajouter 3-5 hashtags pertinents après la dernière slide
 
 === IMAGE ===
 Génère un prompt EN ANGLAIS pour un générateur d'images IA.
-RÈGLES ABSOLUES pour l'image :
-- JAMAIS de fond blanc uni. JAMAIS. Utilise toujours un fond coloré, un dégradé, ou une ambiance visuelle riche.
-- JAMAIS de texte, lettres, mots ou typographie dans l'image.
-- JAMAIS de clipart, flat design générique ou illustrations basiques.
-- Privilégie des visuels impactants : ambiance cinématique, éclairage travaillé, profondeur, textures.
-- Style visuel adapté au ton : ${imageStyle}
+
+INTERDICTIONS ABSOLUES (ne jamais enfreindre) :
+- INTERDIT : fond blanc, fond uni blanc, fond clair neutre. C'est la règle #1 la plus importante.
+- INTERDIT : texte, lettres, mots, chiffres, typographie dans l'image.
+- INTERDIT : clipart, flat design générique, illustrations vectorielles basiques, stock photo générique.
+- INTERDIT : visages humains réalistes, logos de marques existantes.
+
+OBLIGATIONS pour le prompt image :
+- Commence TOUJOURS par décrire le fond/l'ambiance (couleur riche, dégradé, texture, scène).
+- Décris une scène ou composition visuelle concrète et spécifique en lien avec "${topic}".
+- Inclus des détails sur l'éclairage (direction, intensité, couleur de la lumière).
+- Ajoute de la profondeur : premier plan, arrière-plan, perspective.
+- Mentionne des textures (métal brossé, verre, bois, néon, fumée, particules...).
+- Style visuel imposé par le ton : ${imageStyle}
 ${profileImageContext}
-- Le prompt doit décrire une scène ou composition visuelle concrète en lien avec le sujet "${topic}".
+- Le prompt doit faire au moins 3 phrases détaillées pour un rendu de haute qualité.
   `;
 
   try {
@@ -167,9 +179,41 @@ ${profileImageContext}
       throw new Error("No text response from Gemini");
     }
 
-    return res.status(200).json(JSON.parse(text));
+    // Parsing robuste de la réponse JSON
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (parseError) {
+      console.error("JSON parse error - raw response:", text);
+      // Tentative de nettoyage : retirer les blocs markdown ```json ... ```
+      const cleaned = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        console.error("JSON parse fallback failed - cleaned response:", cleaned);
+        return res.status(500).json({
+          error: 'La réponse du modèle n\'a pas pu être interprétée. Réessayez.',
+        });
+      }
+    }
+
+    // Validation souple : s'assurer que les champs attendus existent
+    const result = {
+      facebook: Array.isArray(parsed.facebook) ? parsed.facebook : [],
+      instagram: Array.isArray(parsed.instagram) ? parsed.instagram : [],
+      linkedin: Array.isArray(parsed.linkedin) ? parsed.linkedin : [],
+      imagePrompt: typeof parsed.imagePrompt === 'string' ? parsed.imagePrompt : '',
+    };
+
+    return res.status(200).json(result);
   } catch (error) {
-    console.error("Error generating content:", error);
-    return res.status(500).json({ error: 'Failed to generate content' });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error generating content:", errMsg, error);
+    // Message plus explicite pour le debug côté client
+    return res.status(500).json({
+      error: errMsg.includes('did not match')
+        ? 'Le modèle a renvoyé une réponse inattendue. Réessayez.'
+        : 'Failed to generate content',
+    });
   }
 }
